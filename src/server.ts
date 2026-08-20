@@ -21,9 +21,23 @@ const server = serve({
   routes: { "/*": index },
 
   // Turns on extra developer tools: Hot Module Reloading (HMR, which
-  // updates the page in your browser instantly when you save a file) and
-  // forwarding browser console.log() calls to this terminal.
-  development: true,
+  // updates the page in your browser instantly when you save a file),
+  // forwarding browser console.log() calls to this terminal, and detailed
+  // stack traces on a server error. Only for local dev (`bun dev`) — the
+  // Dockerfile sets NODE_ENV=production, so `bun run start`/Docker ship
+  // the real, minified React build with none of that exposed to users.
+  development: process.env.NODE_ENV !== "production",
 });
 
 console.log(`🚀 Server running at ${server.url}`);
+
+// Without this, stopping the container (e.g. `docker stop`, a rolling
+// deploy, `podman stop`) has nothing to catch SIGTERM: this process runs
+// as PID 1 in the container, and an unhandled signal there is silently
+// ignored by the kernel rather than terminating it like it would for any
+// other process — so every stop sits out the full grace period before
+// being force-killed with SIGKILL instead of shutting down immediately.
+process.on("SIGTERM", () => {
+  server.stop();
+  process.exit(0);
+});

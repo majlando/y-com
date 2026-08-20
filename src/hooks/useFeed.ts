@@ -30,10 +30,18 @@ export function useFeed(query: string) {
   // updating it shouldn't itself trigger a re-render.
   const loadedCount = useRef(0);
 
+  // Which query loadMore's response should be allowed to apply to. Kept
+  // in sync with `query` below, same guard purpose as `cancelled` in the
+  // effect: without it, clicking "Load more" and then changing the search
+  // before that request resolves would splice the old query's page-2
+  // results onto the new query's page-1 list once it comes back late.
+  const activeQuery = useRef(query);
+
   useEffect(() => {
     // Guards against a slow response for an old query overwriting a newer
     // one if it resolves out of order — see SNIPPETS.md ("Side effects: useEffect").
     let cancelled = false;
+    activeQuery.current = query;
     setLoading(true);
     setError(null);
 
@@ -74,16 +82,20 @@ export function useFeed(query: string) {
     // to what's already shown, instead of replacing it — unlike the
     // effect above, which is a fresh query.
     loadMore: () => {
+      const requestQuery = query;
       setLoadingMore(true);
       fetchPosts(query, loadedCount.current)
         .then(data => {
+          // The search changed while this was in flight — its results
+          // belong to a query that's no longer on screen, so drop them.
+          if (requestQuery !== activeQuery.current) return;
           setPosts(prev => [...prev, ...data.posts]);
           setTotal(data.total);
           loadedCount.current += data.posts.length;
         })
         .catch(err => {
           console.error(err);
-          setError("Something went wrong while loading more posts.");
+          if (requestQuery === activeQuery.current) setError("Something went wrong while loading more posts.");
         })
         .finally(() => setLoadingMore(false));
     },
