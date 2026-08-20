@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun --hot src/server.ts",
     "start": "bun src/server.ts",
+    "build": "rm -rf dist && bun build ./src/index.html --outdir ./dist --minify",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
