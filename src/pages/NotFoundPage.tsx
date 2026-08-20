@@ -11,7 +11,7 @@ export function NotFoundPage() {
   return (
     <div>
       <h1>Page not found</h1>
-      <p className="muted">There's nothing at this address.</p>
+      <p className="muted empty-state">There's nothing at this address.</p>
       <Link to="/">← Back to the feed</Link>
     </div>
   );

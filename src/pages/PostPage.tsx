@@ -32,13 +32,27 @@ export function PostPage() {
   // A malformed URL (e.g. "/posts/abc") makes postId NaN — fetching that
   // would just 404 into the generic error below, so catch it directly
   // instead of showing a "Try again" button that can never help.
-  if (Number.isNaN(postId)) return <p>Post not found.</p>;
+  if (Number.isNaN(postId)) {
+    return (
+      <div>
+        <Link to={from}>← Back</Link>
+        <p className="empty-state">Post not found.</p>
+      </div>
+    );
+  }
 
   // Show an explicit loading message rather than "Post not found" below —
   // `post` is still null at this point regardless of whether it'll load
   // successfully or not, and a blank page while loading reads as broken
   // rather than "in progress".
-  if (loading) return <p className="muted">Loading…</p>;
+  if (loading) {
+    return (
+      <div>
+        <Link to={from}>← Back</Link>
+        <p className="muted">Loading…</p>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -49,7 +63,14 @@ export function PostPage() {
     );
   }
 
-  if (!post) return <p className="empty-state">Post not found.</p>;
+  if (!post) {
+    return (
+      <div>
+        <Link to={from}>← Back</Link>
+        <p className="empty-state">Post not found.</p>
+      </div>
+    );
+  }
 
   return (
     <div>

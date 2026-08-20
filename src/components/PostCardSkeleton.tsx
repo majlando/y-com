@@ -6,7 +6,7 @@
  */
 export function PostCardSkeleton() {
   return (
-    <div className="post skeleton" aria-hidden="true">
+    <div className="post" aria-hidden="true">
       <div className="skeleton-line skeleton-title" />
       <div className="skeleton-line" />
       <div className="skeleton-line" />

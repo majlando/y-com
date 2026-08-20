@@ -15,16 +15,22 @@ export function useDeletePost(postId: number, isLocal: boolean, onDeleted: () =>
   const { showToast } = useToast();
 
   async function confirmDelete() {
-    setConfirming(false);
-
     // A locally-created post (see hooks/useFeed.ts) was never sent to the
     // server, so there's nothing to delete there; just tell the caller
     // it's gone.
     if (isLocal) {
+      setConfirming(false);
       onDeleted();
       return;
     }
 
+    // Deliberately not clearing `confirming` here — DeleteButton only
+    // renders its "Deleting…" state while `confirming` is still true, so
+    // clearing it before the request settles would make that state
+    // unreachable (both flags would flip in the same render either way,
+    // since React batches these). It's reset below only on failure; on
+    // success `onDeleted()` removes/navigates away from this component,
+    // so there's nothing left to reset.
     setDeleting(true);
 
     try {
@@ -32,9 +38,10 @@ export function useDeletePost(postId: number, isLocal: boolean, onDeleted: () =>
       onDeleted();
     } catch {
       // A toast rather than inline text — it's a one-off failure, and the
-      // button below already reverts to its default (retryable) state.
+      // button below reverts to its default (retryable) state.
       showToast("Could not delete this post.", "error");
       setDeleting(false);
+      setConfirming(false);
     }
   }
 

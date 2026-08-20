@@ -8,7 +8,9 @@ Key React/TypeScript/Bun patterns used in this app, and why.
 src/
   api/posts.ts                      # all network requests
   hooks/                            # data + state per page: useFeed, usePost, useDeletePost
-  components/                       # reusable UI: PostCard, CreatePostForm
+                                     # + useToast, the one app-wide exception (see below)
+  components/                       # reusable UI: PostCard, CreatePostForm, DeleteButton,
+                                     # ErrorState, PostStats, Icons, ToastStack
   pages/                            # one file per route: FeedPage, PostPage, NotFoundPage
   App.tsx, frontend.tsx, server.ts, index.html   # entry points
   index.css                          # global styles, imported by App.tsx
@@ -71,8 +73,9 @@ one, holding its data + loading/error state + actions:
 const { posts, loading, error, addPost, removePost } = useFeed(debouncedQuery);
 ```
 
-State lives and dies with the page (no shared Context) — simpler, and
-fine for a demo of a fake API.
+State lives and dies with the page (no shared Context) for everything
+above — simpler, and fine for a demo of a fake API. `useToast` (below) is
+the one deliberate exception.
 
 **Why `addPost` never calls the API:** dummyjson doesn't actually persist
 anything, so a real `POST` would look like it worked but vanish on the
@@ -86,13 +89,45 @@ against a real backend, without trusting the response.
 
 ## Sharing logic: `useDeletePost`
 
-Confirm → call API (unless `isLocal`) → track `deleting`/`error`. Used by
-both `PostCard` and `PostPage`, each passing its own `isLocal` + `onDeleted`:
+Confirm → call API (unless `isLocal`) → track `confirming`/`deleting`. Used
+by both `PostCard` and `PostPage`, each passing its own `isLocal` +
+`onDeleted`:
 
 ```tsx
 useDeletePost(post.id, post.local === true, () => onDelete(post.id));   // PostCard: remove from list
 useDeletePost(postId, post?.local === true, () => navigate("/"));       // PostPage: navigate away
 ```
+
+A failed delete surfaces via `useToast` (below), not its own `error`
+state — the button already knows how to revert to its default, retryable
+look on failure, so all that's left to do is tell the user why.
+
+## Sharing state across the app: `useToast`
+
+The one exception to "state lives and dies with the page" above. A failed
+delete or a failed "Load more" can happen from *any* page, so the toast
+list they both write to has to live above routing, not inside one page's
+hook:
+
+```tsx
+// App.tsx
+<ToastProvider>
+  <div className="app">...<Routes>...</Routes></div>
+</ToastProvider>
+
+// anywhere below it, e.g. hooks/useDeletePost.ts
+const { showToast } = useToast();
+showToast("Could not delete this post.", "error");
+```
+
+`useToast()` throws if called outside `ToastProvider` — since the provider
+already wraps the whole app in `App.tsx`, that should never happen; the
+throw is just a loud failure instead of a silently-dropped toast if that
+ever changes. Reserved for one-off failures that shouldn't disturb the
+surrounding layout (a card list, a page) — a failure that blocks all
+content (the initial feed/post load) still gets an inline `ErrorState` +
+"Try again" instead, since that needs a persistent way to recover, not a
+message that fades on its own.
 
 ## Searching: synced to the URL
 
