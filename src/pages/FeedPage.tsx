@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useFeed } from "../hooks/useFeed";
 import { PostCard } from "../components/PostCard";
+import { PostCardSkeleton } from "../components/PostCardSkeleton";
 import { CreatePostForm } from "../components/CreatePostForm";
 
 /**
@@ -65,12 +66,6 @@ export function FeedPage() {
 
       {showCreateForm && <CreatePostForm onCreate={addPost} onDone={() => setShowCreateForm(false)} />}
 
-      {/* Only shown on the very first load, when there's nothing else on
-         screen yet. A search re-fetch also sets `loading`, but by then the
-         previous results are already visible — see the dimmed post-list
-         below instead of flashing this in above them on every keystroke. */}
-      {loading && posts.length === 0 && <p className="muted">Loading…</p>}
-
       {error && (
         <>
           <p role="alert">{error}</p>
@@ -80,16 +75,24 @@ export function FeedPage() {
         </>
       )}
 
-      {!loading && !error && posts.length === 0 && <p className="muted">No posts found.</p>}
+      {!loading && !error && posts.length === 0 && (
+        <p className="muted">{debouncedQuery ? `No posts found for "${debouncedQuery}".` : "No posts found."}</p>
+      )}
 
       {/* Hidden on error — the list below could be stale (e.g. left over
          from before a failed search), and showing it next to an error
          banner reads as contradictory. */}
       {!error && (
-        <div className={`post-list${loading ? " post-list-loading" : ""}`}>
-          {posts.map(post => (
-            <PostCard key={post.id} post={post} onDelete={removePost} />
-          ))}
+        <div className={`post-list${loading && posts.length > 0 ? " post-list-loading" : ""}`}>
+          {loading && posts.length === 0
+            ? // The very first load, before there's anything real to show —
+              // three placeholder cards instead of a bare "Loading…" line,
+              // so the feed's layout is visible right away. A search
+              // re-fetch also sets `loading`, but by then real results are
+              // already on screen, so it dims them (above) instead of
+              // swapping in skeletons on every keystroke.
+              Array.from({ length: 3 }, (_, i) => <PostCardSkeleton key={i} />)
+            : posts.map(post => <PostCard key={post.id} post={post} onDelete={removePost} />)}
         </div>
       )}
 

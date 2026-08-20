@@ -29,7 +29,9 @@ export function PostCard({ post, onDelete }: PostCardProps) {
     <article className="post">
       <h2>
         {isLocal ? (
-          post.title
+          <>
+            {post.title} <span className="local-badge">Not saved</span>
+          </>
         ) : (
           <Link to={`/posts/${post.id}`} state={{ from: location.pathname + location.search }}>
             {post.title}

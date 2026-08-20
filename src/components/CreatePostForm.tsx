@@ -44,7 +44,7 @@ export function CreatePostForm({ onCreate, onDone }: CreatePostFormProps) {
       <h2>New Post</h2>
 
       <label htmlFor="post-title">Title</label>
-      <input id="post-title" required value={title} onChange={e => setTitle(e.target.value)} />
+      <input id="post-title" required autoFocus value={title} onChange={e => setTitle(e.target.value)} />
 
       <label htmlFor="post-body">Post</label>
       <textarea

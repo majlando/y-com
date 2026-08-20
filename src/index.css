@@ -7,13 +7,15 @@
 :root {
   font-family: system-ui, sans-serif;
   line-height: 1.5;
-  /* Tells the browser this page is light-only, so its default colors
-     (like scrollbars, form controls) match the palette below. */
-  color-scheme: light;
+  /* "light dark" (not just "light") tells the browser this page adapts,
+     so native form controls/scrollbars follow whichever palette below is
+     actually active. */
+  color-scheme: light dark;
 
   /* A small palette, defined once as custom properties ("CSS variables")
      so every rule below reads from the same handful of names instead of
-     repeating color codes. */
+     repeating color codes. Redefined for dark mode just below — every
+     rule in this file keeps working unchanged either way. */
   --bg: #f4f4f5;
   --surface: #ffffff;
   --border: #d8d8dc;
@@ -23,6 +25,26 @@
   --accent-contrast: #ffffff;
   --danger: #dc2626;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* --surface stays lighter than --bg, same relationship as light mode
+       (cards read as "raised" above the page), just inverted in absolute
+       terms. --accent/--danger are brightened a step from their light-mode
+       values — both are used two ways (solid fill behind white text, and
+       as plain text against --accent-soft/--surface), so they need to
+       stay legible against dark backgrounds without going so light that
+       white button text loses contrast on top of them. */
+    --bg: #18181b;
+    --surface: #27272a;
+    --border: #3f3f46;
+    --text-muted: #a1a1aa;
+    --accent: #6366f1;
+    --accent-soft: #312e81;
+    --danger: #ef4444;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
 }
 
 body {
@@ -96,6 +118,14 @@ input:focus,
 textarea:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+/* :focus-visible (not plain :focus) so this ring only shows for keyboard
+   navigation, not a mouse click — box-shadow instead of outline so it
+   follows the field's own border-radius instead of squaring it off. */
+input:focus-visible,
+textarea:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 button {
@@ -226,6 +256,44 @@ button:disabled {
   opacity: 0.5;
 }
 
+/* PostCardSkeleton.tsx: placeholder bars standing in for a title/body on
+   the very first load. */
+.skeleton-line {
+  height: 0.9rem;
+  border-radius: 4px;
+  background: var(--border);
+  margin-bottom: 0.6rem;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-title {
+  height: 1.15rem;
+  width: 55%;
+  margin-bottom: 1rem;
+}
+
+.skeleton-short {
+  width: 40%;
+  margin-bottom: 0;
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
 /* FeedPage.tsx: the "Load more" button shown below the list when another
    page of posts is available. */
 .load-more {
@@ -246,8 +314,34 @@ button:disabled {
   transition: box-shadow 0.15s ease;
 }
 
+.post-list .post {
+  /* Anchors the title link's ::after below, so it can be positioned
+     relative to the whole card instead of the page. */
+  position: relative;
+}
+
 .post-list .post:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+/* "Stretched link": makes the entire card clickable via the title's real
+   <a>, without wrapping the whole card (which contains a <button>) in an
+   anchor — nested interactive elements are invalid HTML and break
+   keyboard/screen-reader navigation. The ::after covers the full card;
+   DeleteButton's .actions is lifted above it below so it stays its own
+   click target. Only matches when the title actually has a link, so a
+   locally-created post (title is plain text, not an <a>) is correctly
+   left non-clickable-as-a-card. */
+.post-list .post h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.post-list .post .actions {
+  position: relative;
+  z-index: 1;
 }
 
 .post h1 {
@@ -289,6 +383,21 @@ button:disabled {
   background: var(--accent-soft);
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
+}
+
+/* PostCard.tsx: marks a post created locally this session (see
+   hooks/useFeed.ts's addPost) whose title isn't a link. Deliberately
+   plainer than .tag — gray, not accent-colored — since this is a status,
+   not a category, and shouldn't compete with real tags for attention. */
+.local-badge {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  vertical-align: middle;
 }
 
 /* PostCard.tsx / PostPage.tsx: a post's likes/views, under its tags. */
