@@ -53,3 +53,7 @@ docker stop y-com
 docker rm -f y-com
 docker rmi y-com
 ```
+
+`docker stop` returns immediately instead of waiting out the full grace
+period — `server.ts` handles `SIGTERM` explicitly for exactly this (see
+`docs/SNIPPETS.md`, "Graceful shutdown").

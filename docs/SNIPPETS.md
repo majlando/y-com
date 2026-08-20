@@ -1,19 +1,17 @@
 # SNIPPETS
 
-Key React/TypeScript/Bun patterns used in this app, and why. 
+I bring you; Snippets!
 
 ## Project structure
 
 ```
 src/
   api/posts.ts                      # all network requests
-  hooks/                            # data + state per page: useFeed, usePost, useDeletePost
-                                     # + useToast, the one app-wide exception (see below)
-  components/                       # reusable UI: PostCard, CreatePostForm, DeleteButton,
-                                     # ErrorState, PostStats, Icons, ToastStack
+  hooks/                            # data + state per page: useFeed, usePost, useDeletePost ...
+  components/                       # reusable UI: PostCard, PostCardSkeleton, CreatePostForm ...
   pages/                            # one file per route: FeedPage, PostPage, NotFoundPage
   App.tsx, frontend.tsx, server.ts, index.html   # entry points
-  index.css                          # global styles, imported by App.tsx
+  index.css                         # global styles, imported by App.tsx
 ```
 
 ## Components & props
@@ -80,22 +78,46 @@ the one deliberate exception.
 **Why `addPost` never calls the API:** dummyjson doesn't actually persist
 anything, so a real `POST` would look like it worked but vanish on the
 next `GET`. Instead the post is built client-side and prepended to local
-state, marked `local: true` — `PostCard` and `useDeletePost` check that
-flag to skip rendering a dead link / calling a delete on the server.
+state, marked `local: true` — `PostCard` skips rendering it as a link, and
+`DeleteButton` passes the flag into `useDeletePost` as `isLocal` to skip
+calling delete on the server (see below).
 
 `deletePost` *does* still call the real `DELETE` endpoint — dummyjson
 just doesn't actually remove anything, so the app behaves like it would
 against a real backend, without trusting the response.
 
-## Sharing logic: `useDeletePost`
+## Loading state: skeletons vs. dimming
 
-Confirm → call API (unless `isLocal`) → track `confirming`/`deleting`. Used
-by both `PostCard` and `PostPage`, each passing its own `isLocal` +
-`onDeleted`:
+`useFeed`'s `loading` flag means two different things depending on when
+it's true, so `FeedPage` renders it two different ways:
 
 ```tsx
-useDeletePost(post.id, post.local === true, () => onDelete(post.id));   // PostCard: remove from list
-useDeletePost(postId, post?.local === true, () => navigate("/"));       // PostPage: navigate away
+{loading && posts.length === 0
+  ? Array.from({ length: 3 }, (_, i) => <PostCardSkeleton key={i} />)
+  : posts.map(post => <PostCard key={post.id} post={post} onDelete={removePost} />)}
+```
+
+- **First load** (`posts` still empty) — three `PostCardSkeleton`
+  placeholders, mirroring a real card's shape, so the feed's layout is
+  visible right away instead of a blank moment before content pops in.
+- **A search re-fetch** (`posts` already holds the last query's results)
+  — swapping to skeletons here would just flash the list away and back,
+  so the existing cards stay up and get a `post-list-loading` class
+  (dimmed via CSS) instead.
+
+`PostCardSkeleton` is `aria-hidden` — it's purely decorative, so screen
+readers skip straight to the real content once it loads.
+
+## Sharing logic: `useDeletePost`
+
+Confirm → call API (unless `isLocal`) → track `confirming`/`deleting`. The
+hook itself is only ever called from `DeleteButton` — `PostCard` and
+`PostPage` each render that component instead, passing their own `isLocal`
++ `onDeleted`:
+
+```tsx
+<DeleteButton postId={post.id} isLocal={isLocal} onDeleted={() => onDelete(post.id)} label="Delete" />              // PostCard: remove from list
+<DeleteButton postId={postId} isLocal={post.local === true} onDeleted={() => navigate(from)} label="Delete post" /> // PostPage: back to previous search
 ```
 
 A failed delete surfaces via `useToast` (below), not its own `error`
@@ -199,3 +221,19 @@ client-side routing (React Router) can decide what to show for any URL,
 including ones the server knows nothing about (e.g. `/posts/42`). Bun
 bundles on the fly on every request — one code path, no separate build
 step, even in Docker. See `docs/COMMANDS.md` for Docker.
+
+## Graceful shutdown: `SIGTERM`
+
+```ts
+process.on("SIGTERM", async () => {
+  await server.stop();
+  process.exit(0);
+});
+```
+
+Inside a container this process runs as PID 1, which doesn't get the
+kernel's default signal handling every other process gets for free.
+Without an explicit handler, `docker stop`/`podman stop`/a rolling deploy
+sends `SIGTERM`, nothing catches it, and the container sits out the full
+grace period before being force-killed with `SIGKILL` instead of stopping
+right away. See `docs/COMMANDS.md` for the Docker commands this applies to.

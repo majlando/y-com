@@ -121,7 +121,7 @@ export function useFeed(query: string) {
 
     // dummyjson doesn't actually persist anything, so instead of calling
     // the real endpoint and trusting the response, we build the post
-    // client-side and mark it `local: true` — PostCard/useDeletePost use
+    // client-side and mark it `local: true` — PostCard/DeleteButton use
     // that to skip linking/deleting on the server.
     addPost: (input: NewPostInput) => {
       const newPost: Post = {

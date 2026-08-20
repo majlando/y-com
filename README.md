@@ -22,7 +22,8 @@ Opens at `http://localhost:3000`.
   original brief this app was built against
 - [`docs/SNIPPETS.md`](./docs/SNIPPETS.md) — the key React/TypeScript/Bun
   patterns used here, and why
-- [`docs/COMMANDS.md`](./docs/COMMANDS.md) — CLI reference (build, test,
-  Docker)
+- [`docs/COMMANDS.md`](./docs/COMMANDS.md) — CLI reference (build, Docker)
+  this app live
 
-Scaffolded with `bun init`.
+
+Scaffolded with `bun init --react`.
