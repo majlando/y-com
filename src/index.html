@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A small social feed for browsing, searching, and posting — built to learn React, TypeScript, and Bun." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>" />
+    <title>Y.com</title>
+  </head>
+  <body>
+    <!-- React renders our entire app inside this empty <div>. -->
+    <div id="root"></div>
+    <!-- Bun bundles frontend.tsx (and everything it imports) automatically
+         when this page is requested — no separate build config needed. -->
+    <script type="module" src="./frontend.tsx"></script>
+  </body>
+</html>

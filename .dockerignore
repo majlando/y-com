@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+*.md
+
+# Never bake local secrets into the image, for the same reason .gitignore
+# excludes them. `COPY . .` in the Dockerfile would otherwise include a
+# real .env file if one exists on the machine building the image.
+.env
+.env.*
