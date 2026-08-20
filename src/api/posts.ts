@@ -7,7 +7,7 @@
  */
 
 const BASE_URL = "https://dummyjson.com";
-const LIMIT = 100;
+const PAGE_SIZE = 10;
 
 export interface Post {
   id: number;
@@ -36,14 +36,16 @@ export interface PostsPage {
 }
 
 /**
- * Get the posts for the feed — the most recent ones, or search results if
- * `query` is given (non-empty). Both endpoints return the same shape of
+ * Get one page of posts for the feed — the most recent ones, or search
+ * results if `query` is given (non-empty). `skip` is how many posts to
+ * skip over (0 for the first page, PAGE_SIZE for the second, etc.) — see
+ * hooks/useFeed.ts's loadMore. Both endpoints return the same shape of
  * response (`{ posts: [...], total: ... }`), just via a different path.
  */
-export async function fetchPosts(query: string): Promise<PostsPage> {
+export async function fetchPosts(query: string, skip: number = 0): Promise<PostsPage> {
   const path = query
-    ? `/posts/search?q=${encodeURIComponent(query)}&limit=${LIMIT}`
-    : `/posts?limit=${LIMIT}`;
+    ? `/posts/search?q=${encodeURIComponent(query)}&limit=${PAGE_SIZE}&skip=${skip}`
+    : `/posts?limit=${PAGE_SIZE}&skip=${skip}`;
 
   const res = await fetch(`${BASE_URL}${path}`);
   // `fetch()` does NOT throw on a 404/500 — you have to check `res.ok`

@@ -27,7 +27,8 @@ export function FeedPage() {
 
   // useFeed fetches the main feed when `debouncedQuery` is empty, or
   // search results when it isn't — see hooks/useFeed.ts.
-  const { posts, loading, error, retry, addPost, removePost } = useFeed(debouncedQuery);
+  const { posts, hasMore, loading, loadingMore, error, retry, addPost, removePost, loadMore } =
+    useFeed(debouncedQuery);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -89,6 +90,18 @@ export function FeedPage() {
           {posts.map(post => (
             <PostCard key={post.id} post={post} onDelete={removePost} />
           ))}
+        </div>
+      )}
+
+      {/* Only the first page loads up front — hasMore (from the `total`
+         the API reports) tells us whether there's another page to fetch.
+         Hidden during the initial/search loading state above, so it
+         doesn't flash on screen right before the real list appears. */}
+      {!error && !loading && hasMore && (
+        <div className="load-more">
+          <button type="button" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? "Loading…" : "Load more"}
+          </button>
         </div>
       )}
     </div>

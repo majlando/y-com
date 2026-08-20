@@ -12,7 +12,9 @@ export interface NewPostInput {
  */
 export function useFeed(query: string) {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -21,6 +23,12 @@ export function useFeed(query: string) {
   // trigger a re-render; it's only ever read at the moment a post is
   // created.
   const nextLocalId = useRef(-1);
+
+  // How many posts we've fetched from the server for the current query —
+  // i.e. the `skip` to use for the next page. A ref, not state: it's only
+  // ever read from loadMore (an event handler), never during render, so
+  // updating it shouldn't itself trigger a re-render.
+  const loadedCount = useRef(0);
 
   useEffect(() => {
     // Guards against a slow response for an old query overwriting a newer
@@ -33,6 +41,8 @@ export function useFeed(query: string) {
       .then(data => {
         if (cancelled) return;
         setPosts(data.posts);
+        setTotal(data.total);
+        loadedCount.current = data.posts.length;
       })
       .catch(err => {
         // Logged so a real bug (e.g. a typo'd URL) is visible in the
@@ -52,9 +62,31 @@ export function useFeed(query: string) {
 
   return {
     posts,
+    // Only meaningful once loadedCount catches up with what's on screen —
+    // by then this tells FeedPage whether a "Load more" button is due.
+    hasMore: loadedCount.current < total,
     loading,
+    loadingMore,
     error,
     retry: () => setAttempt(a => a + 1),
+
+    // Fetches the next page (picking up from loadedCount) and appends it
+    // to what's already shown, instead of replacing it — unlike the
+    // effect above, which is a fresh query.
+    loadMore: () => {
+      setLoadingMore(true);
+      fetchPosts(query, loadedCount.current)
+        .then(data => {
+          setPosts(prev => [...prev, ...data.posts]);
+          setTotal(data.total);
+          loadedCount.current += data.posts.length;
+        })
+        .catch(err => {
+          console.error(err);
+          setError("Something went wrong while loading more posts.");
+        })
+        .finally(() => setLoadingMore(false));
+    },
 
     // dummyjson doesn't actually persist anything, so instead of calling
     // the real endpoint and trusting the response, we build the post

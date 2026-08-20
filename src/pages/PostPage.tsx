@@ -1,6 +1,6 @@
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { usePost } from "../hooks/usePost";
-import { useDeletePost } from "../hooks/useDeletePost";
+import { DeleteButton } from "../components/DeleteButton";
 
 /**
  * The post detail page (route "/posts/:id"): shows one post in full, its
@@ -17,12 +17,15 @@ export function PostPage() {
   // send the user back to the feed after deleting this post.
   const navigate = useNavigate();
 
+  // PostCard sets this when linking here, to whatever the feed's URL was
+  // at the time (e.g. "/?q=love") — so "← Back" (and post-delete) return
+  // to the same search instead of always landing on the unfiltered feed.
+  // Falls back to "/" when there's no such state, e.g. a direct visit to
+  // this URL.
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from ?? "/";
+
   const { post, comments, loading, error, retry } = usePost(postId);
-  const { deleting, error: deleteError, handleDelete } = useDeletePost(
-    postId,
-    post?.local === true,
-    () => navigate("/"),
-  );
 
   // A malformed URL (e.g. "/posts/abc") makes postId NaN — fetching that
   // would just 404 into the generic error below, so catch it directly
@@ -38,7 +41,7 @@ export function PostPage() {
   if (error) {
     return (
       <div>
-        <Link to="/">← Back</Link>
+        <Link to={from}>← Back</Link>
         <p role="alert">{error}</p>
         <button type="button" onClick={retry}>
           Try again
@@ -51,7 +54,7 @@ export function PostPage() {
 
   return (
     <div>
-      <Link to="/">← Back</Link>
+      <Link to={from}>← Back</Link>
 
       <article className="post">
         <h1>{post.title}</h1>
@@ -68,16 +71,7 @@ export function PostPage() {
         <p className="muted post-stats">
           {post.reactions.likes} likes · {post.views} views
         </p>
-        <div className="actions">
-          <button type="button" className="danger" onClick={handleDelete} disabled={deleting}>
-            {deleting ? "Deleting…" : "Delete post"}
-          </button>
-        </div>
-        {deleteError && (
-          <p role="alert" className="muted">
-            {deleteError}
-          </p>
-        )}
+        <DeleteButton postId={postId} isLocal={post.local === true} onDeleted={() => navigate(from)} label="Delete post" />
       </article>
 
       <h2>Comments</h2>

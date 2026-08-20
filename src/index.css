@@ -226,6 +226,14 @@ button:disabled {
   opacity: 0.5;
 }
 
+/* FeedPage.tsx: the "Load more" button shown below the list when another
+   page of posts is available. */
+.load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
 /* A post "card" — used by both PostCard.tsx (in the feed) and
    PostPage.tsx (the detail page), so a post looks the same whether you're
    scrolling past it or reading it. */
@@ -293,6 +301,7 @@ button:disabled {
    than a primary button, since these are secondary, in-context actions. */
 .actions {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   margin-top: 0.75rem;
 }
@@ -300,6 +309,13 @@ button:disabled {
 .actions button {
   padding: 0.3rem 0.7rem;
   font-size: 0.85rem;
+}
+
+/* DeleteButton.tsx: replaces the delete button in place once clicked, in
+   lieu of the browser's own unstyleable confirm() dialog. */
+.confirm-prompt {
+  font-size: 0.85rem;
+  color: var(--text-muted);
 }
 
 /* PostPage.tsx: a single comment. */
