@@ -25,6 +25,10 @@
   --accent-contrast: #ffffff;
   --danger: #dc2626;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  /* Decorative-only: the heart icon in PostStats.tsx. Kept separate from
+     --danger (a semantic "destructive action" color) even though both are
+     red-family, since a like count is neither an error nor a warning. */
+  --like: #e11d48;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -44,6 +48,8 @@
     --accent-soft: #312e81;
     --danger: #ef4444;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    /* Brightened a step, same reason as --accent/--danger above. */
+    --like: #fb7185;
   }
 }
 
@@ -61,15 +67,34 @@ body {
   padding: 1rem 1.5rem 3rem;
 }
 
+/* Every top-level heading in the app (FeedPage's "Your Feed",
+   NotFoundPage's "Page not found", and a post's own title on PostPage)
+   shares this size/weight for one consistent scale; .post h1 below only
+   overrides the margin, to sit tighter against the body text under it. */
+.app h1 {
+  margin: 0 0 1.25rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* PostPage's "Comments" heading. */
+.section-heading {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
 header {
   padding: 1rem 0;
-  border-bottom: 1px solid var(--border);
   margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
 }
 
 header a {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: inherit;
   text-decoration: none;
 }
@@ -83,6 +108,16 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+/* Same ring everywhere (inputs, buttons, plain links) so keyboard focus
+   reads as one consistent affordance across the app, regardless of the
+   element's own color (e.g. .danger buttons don't get a red-tinted ring). */
+button:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-radius: 4px;
 }
 
 /* Styling `input`, `textarea`, and `button` directly (instead of giving
@@ -195,12 +230,48 @@ button:disabled {
   margin-bottom: 1.5rem;
 }
 
-.feed-toolbar input {
-  /* flex: 1 makes the input grow/shrink to fill remaining space next to
-     the button, instead of both fighting over width via input's own
-     width: 100%. */
+.search-field {
+  /* Anchors .search-clear below to this box rather than the page, and
+     takes over the flex: 1 that used to live on the input itself, since
+     the input is no longer directly inside .feed-toolbar. */
+  position: relative;
   flex: 1;
+}
+
+.feed-toolbar input {
   margin-bottom: 0;
+  /* Room for .search-clear so typed text doesn't run under it. */
+  padding-right: 2rem;
+}
+
+/* Chrome/Safari already draw their own "×" once a search input has text;
+   ours replaces it, so the native one is suppressed to avoid a double-×.
+   Firefox never drew one, so this has no effect there. */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-clear {
+  position: absolute;
+  top: 50%;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.search-clear:hover {
+  color: inherit;
 }
 
 /* CreatePostForm.tsx */
@@ -320,9 +391,22 @@ button:disabled {
   position: relative;
 }
 
-.post-list .post:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+/* :has(h2 a) scopes both of the rules below to cards that actually have a
+   title link — a locally-created post's title is plain text (see
+   PostCard.tsx), so without this its card would still show the "this is
+   clickable" treatment despite not being navigable. */
+.post-list .post:has(h2 a):hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   cursor: pointer;
+}
+
+/* Keyboard-focus parity with the hover above: the stretched-link <a>
+   itself is only as wide as the title text, so a plain a:focus-visible
+   ring (see below) would hug just those words even though activating the
+   link navigates via the whole card's hit area. Expanding the ring to the
+   whole card when its link is focused keeps the two affordances matched. */
+.post-list .post:has(h2 a:focus-visible) {
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);
 }
 
 /* "Stretched link": makes the entire card clickable via the title's real
@@ -342,6 +426,13 @@ button:disabled {
 .post-list .post .actions {
   position: relative;
   z-index: 1;
+}
+
+/* The title link's own focus-visible ring (from the universal button/a
+   rule above) would just hug the title text — suppressed here since the
+   card-level ring above already covers the whole card instead. */
+.post-list .post h2 a:focus-visible {
+  box-shadow: none;
 }
 
 .post h1 {
@@ -385,25 +476,18 @@ button:disabled {
   border-radius: 999px;
 }
 
-/* PostCard.tsx: marks a post created locally this session (see
-   hooks/useFeed.ts's addPost) whose title isn't a link. Deliberately
-   plainer than .tag — gray, not accent-colored — since this is a status,
-   not a category, and shouldn't compete with real tags for attention. */
-.local-badge {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  vertical-align: middle;
-}
-
-/* PostCard.tsx / PostPage.tsx: a post's likes/views, under its tags. */
+/* PostStats.tsx: a post's likes/views, under its tags. */
 .post-stats {
   margin: 0.4rem 0 0;
   font-size: 0.85rem;
+  display: flex;
+  gap: 0.9rem;
+}
+
+.post-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 /* The row of action buttons on a post (currently just delete) — smaller
@@ -440,4 +524,115 @@ button:disabled {
 /* Dimmed helper text, e.g. "No posts found." or "No comments yet." */
 .muted {
   opacity: 0.6;
+}
+
+/* FeedPage.tsx / PostPage.tsx: "No posts found.", "No comments yet." —
+   applied alongside .muted for a bit of breathing room around the message
+   instead of it sitting flush against whatever's above it. */
+.empty-state {
+  padding: 1.5rem 0;
+  text-align: center;
+}
+
+/* ErrorState.tsx: a blocking error (feed/search/post load failure) plus
+   its "Try again" button. */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.error-state p {
+  margin: 0;
+}
+
+/* ToastStack.tsx: fixed-position stack of transient failure messages
+   (e.g. a failed delete, a failed "Load more") — for one-off failures that
+   shouldn't disturb the surrounding layout, unlike ErrorState above. */
+.toast-stack {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.5rem;
+  width: min(22rem, calc(100vw - 2rem));
+  z-index: 100;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  font-size: 0.9rem;
+  animation: toast-in 0.2s ease;
+}
+
+.toast-error {
+  border-color: var(--danger);
+}
+
+.toast-dismiss {
+  flex-shrink: 0;
+  padding: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.toast-dismiss:hover {
+  color: inherit;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+/* Below this width, the search box + "+ New Post" button crowd each other
+   into an uncomfortably tight row — stack them instead, and give the
+   controls actually used with a thumb (not the desktop-sized ones
+   elsewhere) a bit more room to tap. */
+@media (max-width: 600px) {
+  .feed-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .feed-toolbar input,
+  .feed-toolbar .primary-button,
+  .actions button,
+  .load-more button {
+    min-height: 44px;
+  }
 }

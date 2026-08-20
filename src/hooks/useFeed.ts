@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchPosts, type Post } from "../api/posts";
+import { useToast } from "./useToast";
 
 export interface NewPostInput {
   title: string;
@@ -41,6 +42,8 @@ export function useFeed(query: string) {
   // while the old request is still in flight.
   const generation = useRef(0);
 
+  const { showToast } = useToast();
+
   useEffect(() => {
     // Guards against a slow response for an old query overwriting a newer
     // one if it resolves out of order — see SNIPPETS.md ("Side effects: useEffect").
@@ -77,6 +80,13 @@ export function useFeed(query: string) {
     // Only meaningful once loadedCount catches up with what's on screen —
     // by then this tells FeedPage whether a "Load more" button is due.
     hasMore: loadedCount.current < total,
+    // How many more posts are available beyond what's loaded — shown on
+    // the "Load more" button. Deliberately not `total - posts.length`:
+    // addPost (below) prepends locally-created posts to `posts` without
+    // touching `loadedCount`/`total`, since they're not part of server
+    // pagination — using loadedCount keeps this number accurate even after
+    // creating an unsaved post.
+    remaining: Math.max(total - loadedCount.current, 0),
     loading,
     loadingMore,
     error,
@@ -99,7 +109,12 @@ export function useFeed(query: string) {
         })
         .catch(err => {
           console.error(err);
-          if (requestGeneration === generation.current) setError("Something went wrong while loading more posts.");
+          // A toast, not the shared `error` state above — that state also
+          // controls whether the post list renders at all (see FeedPage),
+          // so reusing it here would hide the already-loaded posts behind
+          // an error banner just because one more page failed to load.
+          // "Load more" stays on screen and is its own retry.
+          if (requestGeneration === generation.current) showToast("Something went wrong while loading more posts.", "error");
         })
         .finally(() => setLoadingMore(false));
     },

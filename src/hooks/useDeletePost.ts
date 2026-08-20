@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { deletePost } from "../api/posts";
+import { useToast } from "./useToast";
 
 /**
  * Shared by PostCard (in the feed) and PostPage (the detail page), via
@@ -11,7 +12,7 @@ import { deletePost } from "../api/posts";
 export function useDeletePost(postId: number, isLocal: boolean, onDeleted: () => void) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   async function confirmDelete() {
     setConfirming(false);
@@ -25,13 +26,14 @@ export function useDeletePost(postId: number, isLocal: boolean, onDeleted: () =>
     }
 
     setDeleting(true);
-    setError(null);
 
     try {
       await deletePost(postId);
       onDeleted();
     } catch {
-      setError("Could not delete this post.");
+      // A toast rather than inline text — it's a one-off failure, and the
+      // button below already reverts to its default (retryable) state.
+      showToast("Could not delete this post.", "error");
       setDeleting(false);
     }
   }
@@ -39,7 +41,6 @@ export function useDeletePost(postId: number, isLocal: boolean, onDeleted: () =>
   return {
     confirming,
     deleting,
-    error,
     requestDelete: () => setConfirming(true),
     cancelDelete: () => setConfirming(false),
     confirmDelete,

@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router";
 import type { Post } from "../api/posts";
 import { DeleteButton } from "./DeleteButton";
+import { PostStats } from "./PostStats";
 
 interface PostCardProps {
   post: Post;
@@ -29,9 +30,7 @@ export function PostCard({ post, onDelete }: PostCardProps) {
     <article className="post">
       <h2>
         {isLocal ? (
-          <>
-            {post.title} <span className="local-badge">Not saved</span>
-          </>
+          post.title
         ) : (
           <Link to={`/posts/${post.id}`} state={{ from: location.pathname + location.search }}>
             {post.title}
@@ -53,9 +52,7 @@ export function PostCard({ post, onDelete }: PostCardProps) {
         </div>
       )}
 
-      <p className="muted post-stats">
-        {post.reactions.likes} likes · {post.views} views
-      </p>
+      <PostStats likes={post.reactions.likes} views={post.views} />
 
       <DeleteButton postId={post.id} isLocal={isLocal} onDeleted={() => onDelete(post.id)} label="Delete" />
     </article>

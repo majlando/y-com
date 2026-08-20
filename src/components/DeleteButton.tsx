@@ -15,37 +15,29 @@ interface DeleteButtonProps {
  * place, rather than the browser's native confirm() dialog.
  */
 export function DeleteButton({ postId, isLocal, onDeleted, label }: DeleteButtonProps) {
-  const { confirming, deleting, error, requestDelete, cancelDelete, confirmDelete } = useDeletePost(
+  const { confirming, deleting, requestDelete, cancelDelete, confirmDelete } = useDeletePost(
     postId,
     isLocal,
     onDeleted,
   );
 
   return (
-    <>
-      <div className="actions">
-        {confirming ? (
-          <>
-            <span className="confirm-prompt">Delete this post?</span>
-            <button type="button" className="danger" onClick={confirmDelete} disabled={deleting}>
-              {deleting ? "Deleting…" : "Yes, delete"}
-            </button>
-            <button type="button" onClick={cancelDelete} disabled={deleting}>
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button type="button" className="danger" onClick={requestDelete}>
-            {label}
+    <div className="actions">
+      {confirming ? (
+        <>
+          <span className="confirm-prompt">Delete this post?</span>
+          <button type="button" className="danger" onClick={confirmDelete} disabled={deleting}>
+            {deleting ? "Deleting…" : "Yes, delete"}
           </button>
-        )}
-      </div>
-
-      {error && (
-        <p role="alert" className="muted">
-          {error}
-        </p>
+          <button type="button" onClick={cancelDelete} disabled={deleting}>
+            Cancel
+          </button>
+        </>
+      ) : (
+        <button type="button" className="danger" onClick={requestDelete}>
+          {label}
+        </button>
       )}
-    </>
+    </div>
   );
 }

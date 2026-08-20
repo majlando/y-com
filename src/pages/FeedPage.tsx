@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { useFeed } from "../hooks/useFeed";
 import { PostCard } from "../components/PostCard";
 import { PostCardSkeleton } from "../components/PostCardSkeleton";
 import { CreatePostForm } from "../components/CreatePostForm";
+import { ErrorState } from "../components/ErrorState";
 
 /**
  * The home page (route "/"): a toolbar (search + new post), then the list
@@ -28,10 +29,32 @@ export function FeedPage() {
 
   // useFeed fetches the main feed when `debouncedQuery` is empty, or
   // search results when it isn't — see hooks/useFeed.ts.
-  const { posts, hasMore, loading, loadingMore, error, retry, addPost, removePost, loadMore } =
+  const { posts, hasMore, remaining, loading, loadingMore, error, retry, addPost, removePost, loadMore } =
     useFeed(debouncedQuery);
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const newPostButtonRef = useRef<HTMLButtonElement>(null);
+
+  function closeCreateForm() {
+    setShowCreateForm(false);
+    // Neither this nor the form's own "Cancel" button leaves focus
+    // anywhere once the form unmounts — send it back to the toggle that
+    // opened the form instead of letting it fall through to the page.
+    newPostButtonRef.current?.focus();
+  }
+
+  // Escape collapses the create-post form, same as clicking "Cancel" —
+  // only listens while the form is actually open.
+  useEffect(() => {
+    if (!showCreateForm) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") closeCreateForm();
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showCreateForm]);
 
   return (
     <div>
@@ -52,31 +75,45 @@ export function FeedPage() {
         <label htmlFor="post-search" className="sr-only">
           Search posts
         </label>
-        <input
-          id="post-search"
-          type="search"
-          placeholder="Search posts…"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-        />
-        <button type="button" className="primary-button" onClick={() => setShowCreateForm(show => !show)}>
+        <div className="search-field">
+          <input
+            id="post-search"
+            ref={searchInputRef}
+            type="search"
+            placeholder="Search posts…"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          {query && (
+            <button
+              type="button"
+              className="search-clear"
+              aria-label="Clear search"
+              onClick={() => {
+                setQuery("");
+                searchInputRef.current?.focus();
+              }}
+            >
+              ×
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          ref={newPostButtonRef}
+          className="primary-button"
+          onClick={() => setShowCreateForm(show => !show)}
+        >
           {showCreateForm ? "Cancel" : "+ New Post"}
         </button>
       </div>
 
-      {showCreateForm && <CreatePostForm onCreate={addPost} onDone={() => setShowCreateForm(false)} />}
+      {showCreateForm && <CreatePostForm onCreate={addPost} onDone={closeCreateForm} />}
 
-      {error && (
-        <>
-          <p role="alert">{error}</p>
-          <button type="button" onClick={retry}>
-            Try again
-          </button>
-        </>
-      )}
+      {error && <ErrorState message={error} onRetry={retry} />}
 
       {!loading && !error && posts.length === 0 && (
-        <p className="muted">{debouncedQuery ? `No posts found for "${debouncedQuery}".` : "No posts found."}</p>
+        <p className="muted empty-state">{debouncedQuery ? `No posts found for "${debouncedQuery}".` : "No posts found."}</p>
       )}
 
       {/* Hidden on error — the list below could be stale (e.g. left over
@@ -103,7 +140,7 @@ export function FeedPage() {
       {!error && !loading && hasMore && (
         <div className="load-more">
           <button type="button" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? "Loading…" : "Load more"}
+            {loadingMore ? "Loading…" : `Load more (${remaining} remaining)`}
           </button>
         </div>
       )}

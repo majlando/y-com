@@ -1,6 +1,8 @@
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { usePost } from "../hooks/usePost";
 import { DeleteButton } from "../components/DeleteButton";
+import { ErrorState } from "../components/ErrorState";
+import { PostStats } from "../components/PostStats";
 
 /**
  * The post detail page (route "/posts/:id"): shows one post in full, its
@@ -42,15 +44,12 @@ export function PostPage() {
     return (
       <div>
         <Link to={from}>← Back</Link>
-        <p role="alert">{error}</p>
-        <button type="button" onClick={retry}>
-          Try again
-        </button>
+        <ErrorState message={error} onRetry={retry} />
       </div>
     );
   }
 
-  if (!post) return <p>Post not found.</p>;
+  if (!post) return <p className="empty-state">Post not found.</p>;
 
   return (
     <div>
@@ -68,15 +67,13 @@ export function PostPage() {
             ))}
           </div>
         )}
-        <p className="muted post-stats">
-          {post.reactions.likes} likes · {post.views} views
-        </p>
+        <PostStats likes={post.reactions.likes} views={post.views} />
         <DeleteButton postId={postId} isLocal={post.local === true} onDeleted={() => navigate(from)} label="Delete post" />
       </article>
 
-      <h2>Comments</h2>
+      <h2 className="section-heading">Comments</h2>
       {comments.length === 0 ? (
-        <p className="muted">No comments yet.</p>
+        <p className="muted empty-state">No comments yet.</p>
       ) : (
         comments.map(comment => (
           <div key={comment.id} className="comment">
